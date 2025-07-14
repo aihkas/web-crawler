@@ -1,0 +1,21 @@
+# Compiled Go binaries
+/build
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Go workspace file
+go.work
+
+# IDE/Editor specific files
+.idea/
+.vscode/
+*.swp
+
+# Environment variables
+.env
