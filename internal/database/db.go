@@ -107,3 +107,41 @@ func SaveAnalysisResult(db *sql.DB, id int64, result *models.Analysis) error {
 
 	return err
 }
+
+func GetAllAnalyses(db *sql.DB) ([]models.Analysis, error) {
+	rows, err := db.Query("SELECT id, url, status, error_msg, page_title, html_version, heading_counts, internal_link_count, external_link_count, inaccessible_links, has_login_form, created_at, updated_at FROM analysis_results ORDER BY created_at DESC")
+	if err != nil {
+		return nil, fmt.Errorf("failed to query analyses: %w", err)
+	}
+	defer rows.Close()
+
+	var analyses []models.Analysis
+	for rows.Next() {
+		var analysis models.Analysis
+		var headingsJSON, inaccessibleLinksJSON []byte // Raw JSON from DB
+
+		err := rows.Scan(
+			&analysis.ID, &analysis.URL, &analysis.Status, &analysis.ErrorMsg,
+			&analysis.PageTitle, &analysis.HTMLVersion, &headingsJSON,
+			&analysis.InternalLinkCount, &analysis.ExternalLinkCount,
+			&inaccessibleLinksJSON, &analysis.HasLoginForm,
+			&analysis.CreatedAt, &analysis.UpdatedAt,
+		)
+		if err != nil {
+			log.Printf("Warning: Failed to scan row: %v", err)
+			continue
+		}
+		
+		if headingsJSON != nil {
+			json.Unmarshal(headingsJSON, &analysis.HeadingCounts)
+		}
+		if inaccessibleLinksJSON != nil {
+			json.Unmarshal(inaccessibleLinksJSON, &analysis.InaccessibleLinks)
+		}
+
+		analyses = append(analyses, analysis)
+	}
+
+	return analyses, nil
+}
+
