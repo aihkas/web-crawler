@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -21,16 +23,42 @@ func loadEnv() {
 	}
 }
 
+// AuthMiddleware provides token-based authentication for API routes.
+func AuthMiddleware() gin.HandlerFunc {
+	requiredToken := os.Getenv("API_TOKEN")
+	if requiredToken == "" {
+		log.Fatal("FATAL: API_TOKEN environment variable not set.")
+	}
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			return
+		}
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header must be in 'Bearer {token}' format"})
+			return
+		}
+		if parts[1] != requiredToken {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid API token"})
+			return
+		}
+		c.Next()
+	}
+}
+
 func main() {
 	loadEnv()
 	db := database.InitDB()
 	defer db.Close()
 
 	server := &Server{db: db}
-
 	router := gin.Default()
-	
+
+	// Apply the authentication middleware to the entire /api/v1 route group.
 	api := router.Group("/api/v1")
+	api.Use(AuthMiddleware())
 	{
 		api.POST("/analyze", server.handleAnalyzeRequest)
 	}
