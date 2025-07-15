@@ -71,22 +71,21 @@ func SaveAnalysisResult(db *sql.DB, id int64, result *models.Analysis) error {
 		return fmt.Errorf("failed to marshal heading counts: %w", err)
 	}
 	
-	// Inaccessible links will be an empty array.
-	inaccessibleLinksJSON, err := json.Marshal([]models.InaccessibleLink{})
+	inaccessibleLinksJSON, err := json.Marshal(result.InaccessibleLinks)
 	if err != nil {
 		return fmt.Errorf("failed to marshal inaccessible links: %w", err)
 	}
 
 	query := `
         UPDATE analysis_results 
-        SET 
-            status = 'done', 
-            page_title = ?, 
-            html_version = ?, 
-            heading_counts = ?, 
-            internal_link_count = ?, 
-            external_link_count = ?, 
-            inaccessible_links = ?,
+        SET
+			status = 'done',
+			page_title = ?,
+			html_version = ?,
+			heading_counts = ?, 
+            internal_link_count = ?,
+			external_link_count = ?,
+			inaccessible_links = ?,
             has_login_form = ?
         WHERE id = ?`
 
