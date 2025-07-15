@@ -61,6 +61,7 @@ func main() {
 	api.Use(AuthMiddleware())
 	{
 		api.POST("/analyze", server.handleAnalyzeRequest)
+		api.GET("/results", server.handleGetResults)		
 	}
 
 	router.GET("/health", func(c *gin.Context) {
