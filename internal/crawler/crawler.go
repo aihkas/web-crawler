@@ -12,7 +12,7 @@ import (
 )
 
 // AnalyzeURL fetches a URL, parses its HTML, and extracts key information.
-func AnalyzeURL(pageURL string) (*models.AnalysisResult, error) {
+func AnalyzeURL(pageURL string) (*models.Analysis, error) {
 	resp, err := http.Get(pageURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get URL: %w", err)
@@ -23,7 +23,7 @@ func AnalyzeURL(pageURL string) (*models.AnalysisResult, error) {
 		return nil, fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
 	}
 
-	// Parse the base URL to help distinguish internal vs. external links.
+		// Parse the base URL to help distinguish internal vs. external links.
 	base, err := url.Parse(pageURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse base URL: %w", err)
@@ -31,7 +31,7 @@ func AnalyzeURL(pageURL string) (*models.AnalysisResult, error) {
 
 	// Tokenize and parse the HTML body.
 	doc := html.NewTokenizer(resp.Body)
-	result := &models.AnalysisResult{
+	result := &models.Analysis{
 		URL:           pageURL,
 		HeadingCounts: make(map[string]int),
 	}
