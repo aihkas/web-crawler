@@ -35,3 +35,8 @@ tbody tr:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+tbody tr:hover {
+  background-color: #e9ecef;
+  cursor: pointer; /* Add this line */
+}
