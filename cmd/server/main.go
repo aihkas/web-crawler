@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"strconv" 
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -72,6 +73,7 @@ func main() {
 	{
 		api.POST("/analyze", server.handleAnalyzeRequest)
 		api.GET("/results", server.handleGetResults)
+		api.GET("/results/:id", server.handleGetResultByID)
 	}
 	
 	router.GET("/health", func(c *gin.Context) {
@@ -155,5 +157,28 @@ func (s *Server) handleGetResults(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, results)
+}
+
+// handleGetResultByID fetches a single analysis by its ID.
+func (s *Server) handleGetResultByID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	result, err := database.GetAnalysisByID(s.db, id)
+	if err != nil {
+		// Differentiate between not found and other errors
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		} else {
+			log.Printf("ERROR: Failed to get analysis by ID: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve result"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, result)
 }
 
