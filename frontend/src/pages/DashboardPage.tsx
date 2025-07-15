@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Analysis } from '../types';
-import { getAnalysisResults, submitUrlForAnalysis } from '../services/api';
+import { getAnalysisResults, submitUrlForAnalysis, deleteAnalyses } from '../services/api';
 import { AnalysisTable } from '../components/AnalysisTable';
+import { RowSelectionState } from '@tanstack/react-table';
 
 const DashboardPage: React.FC = () => {
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -9,6 +10,9 @@ const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const fetchAnalyses = useCallback(async () => {
     try {
@@ -29,6 +33,16 @@ const DashboardPage: React.FC = () => {
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, [fetchAnalyses]);
 
+    // Filter data based on global filter input
+  const filteredAnalyses = useMemo(() => {
+    if (!globalFilter) return analyses;
+    const lowercasedFilter = globalFilter.toLowerCase();
+    return analyses.filter(analysis => 
+      analysis.url.toLowerCase().includes(lowercasedFilter) ||
+      (analysis.page_title && analysis.page_title.toLowerCase().includes(lowercasedFilter))
+    );
+  }, [analyses, globalFilter]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) {
@@ -45,6 +59,23 @@ const DashboardPage: React.FC = () => {
       setSubmitError('Failed to submit URL. Please try again.');
     }
   };
+
+    const handleDeleteSelected = async () => {
+    const selectedIds = Object.keys(rowSelection).map(index => filteredAnalyses[parseInt(index)].id);
+    if (selectedIds.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} item(s)?`)) {
+        try {
+            await deleteAnalyses(selectedIds);
+            setRowSelection({}); // Clear selection
+            fetchAnalyses(); // Refresh data
+        } catch (err) {
+            setError('Failed to delete items. Please try again.');
+        }
+    }
+  };
+
+  const selectedRowCount = Object.keys(rowSelection).length;
 
   return (
     <div>
@@ -66,12 +97,30 @@ const DashboardPage: React.FC = () => {
 
       <section>
         <h2>Analysis Results</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <input
+            type="text"
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            placeholder="Search results..."
+            style={{ padding: '0.5rem', minWidth: '300px' }}
+          />
+          {selectedRowCount > 0 && (
+            <button onClick={handleDeleteSelected} style={{ background: '#e74c3c', color: 'white' }}>
+              Delete Selected ({selectedRowCount})
+            </button>
+          )}
+        </div>
         {isLoading ? (
           <p>Loading results...</p>
         ) : error ? (
           <p style={{ color: 'red' }}>{error}</p>
         ) : (
-          <AnalysisTable data={analyses} />
+          <AnalysisTable 
+            data={filteredAnalyses} 
+            rowSelection={rowSelection}
+            setRowSelection={setRowSelection}
+          />
         )}
       </section>
     </div>
