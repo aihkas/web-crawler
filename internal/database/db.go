@@ -76,17 +76,17 @@ func SaveAnalysisResult(db *sql.DB, id int64, result *models.Analysis) error {
 	}
 
 	query := `
-	UPDATE analysis_results 
-	SET
-		status = 'done',
-		html_version = ?,
-		page_title = ?,
-		internal_link_count = ?,
-		heading_counts = ?,
-		inaccessible_links = ?,
-		external_link_count = ?,
-		has_login_form = ?
-	WHERE id = ?`
+        UPDATE analysis_results 
+        SET 
+            status = 'done', 
+            page_title = ?, 
+            html_version = ?, 
+            heading_counts = ?, 
+            internal_link_count = ?, 
+            external_link_count = ?, 
+            inaccessible_links = ?,
+            has_login_form = ?
+        WHERE id = ?`
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
