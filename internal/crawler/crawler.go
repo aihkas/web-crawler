@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
 	"golang.org/x/net/html"
 	"web-crawler/internal/models"
@@ -23,46 +25,44 @@ func AnalyzeURL(pageURL string) (*models.Analysis, error) {
 		return nil, fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
 	}
 
-		// Parse the base URL to help distinguish internal vs. external links.
 	base, err := url.Parse(pageURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse base URL: %w", err)
 	}
 
-	// Tokenize and parse the HTML body.
-	doc := html.NewTokenizer(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	
+	doc := html.NewTokenizer(strings.NewReader(string(bodyBytes)))
 	result := &models.Analysis{
 		URL:           pageURL,
 		HeadingCounts: make(map[string]int),
 	}
+	var allLinks []string
 
+	// First Pass: Collect all page metadata and links.
 	for {
 		tokenType := doc.Next()
-
-		switch tokenType {
-		case html.ErrorToken:
-			err := doc.Err()
-			if err == io.EOF {
-				return result, nil
+		if tokenType == html.ErrorToken {
+			if doc.Err() == io.EOF {
+				break
 			}
-			return nil, fmt.Errorf("error parsing HTML: %w", err)
-
+			return nil, fmt.Errorf("error parsing HTML: %w", doc.Err())
+		}
+		
+		switch tokenType {
 		case html.DoctypeToken:
-			// Extract HTML version from Doctype.
 			doctype := doc.Token().Data
 			if strings.Contains(strings.ToLower(doctype), "html") {
 				result.HTMLVersion = "HTML5"
 			} else {
 				result.HTMLVersion = "Older or unknown"
 			}
-
-
 		case html.StartTagToken, html.SelfClosingTagToken:
 			token := doc.Token()
-			// Find title, headings, links, and forms.
 			switch token.Data {
 			case "title":
-				// The next token should be the text token inside the <title> tag.
 				if doc.Next() == html.TextToken {
 					result.PageTitle = strings.TrimSpace(doc.Token().Data)
 				}
@@ -73,10 +73,10 @@ func AnalyzeURL(pageURL string) (*models.Analysis, error) {
 					if attr.Key == "href" {
 						linkURL, err := url.Parse(attr.Val)
 						if err != nil {
-							continue // Ignore malformed URLs
+							continue
 						}
-						// If the link URL is relative, resolve it against the base URL.
 						resolvedURL := base.ResolveReference(linkURL)
+						allLinks = append(allLinks, resolvedURL.String())
 						if resolvedURL.Host == base.Host {
 							result.InternalLinkCount++
 						} else {
@@ -91,6 +91,62 @@ func AnalyzeURL(pageURL string) (*models.Analysis, error) {
 			}
 		}
 	}
+
+	// Second Pass: Concurrently check all collected links for accessibility.
+	result.InaccessibleLinks = checkAllLinks(allLinks)
+
+	return result, nil
+}
+
+// checkAllLinks uses goroutines to check a list of URLs and returns the ones that are inaccessible.
+func checkAllLinks(links []string) []models.InaccessibleLink {
+	var wg sync.WaitGroup
+	resultsChan := make(chan models.InaccessibleLink, len(links))
+	
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	uniqueLinks := make(map[string]struct{})
+
+	for _, link := range links {
+		if _, exists := uniqueLinks[link]; exists {
+			continue
+		}
+		uniqueLinks[link] = struct{}{}
+		
+		wg.Add(1)
+		go func(l string) {
+			defer wg.Done()
+			req, err := http.NewRequest("HEAD", l, nil)
+			if err != nil {
+				return
+			}
+			req.Header.Set("User-Agent", "web-crawler-bot/1.0")
+
+			resp, err := client.Do(req)
+			if err != nil {
+				return
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode >= 400 && resp.StatusCode < 600 {
+				resultsChan <- models.InaccessibleLink{
+					URL:        l,
+					StatusCode: resp.StatusCode,
+				}
+			}
+		}(link)
+	}
+
+	wg.Wait()
+	close(resultsChan)
+
+	var inaccessibleLinks []models.InaccessibleLink
+	for res := range resultsChan {
+		inaccessibleLinks = append(inaccessibleLinks, res)
+	}
+	return inaccessibleLinks
 }
 
 func checkForPasswordInput(t *html.Tokenizer) bool {
