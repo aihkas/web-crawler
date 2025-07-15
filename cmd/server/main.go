@@ -135,3 +135,14 @@ func (s *Server) runAnalysis(id int64, url string) {
 
 	log.Printf("INFO: Successfully completed analysis for job ID %d", id)
 }
+
+func (s *Server) handleGetResults(c *gin.Context) {
+	results, err := database.GetAllAnalyses(s.db)
+	if err != nil {
+		log.Printf("ERROR: Failed to get analysis results: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve results"})
+		return
+	}
+	c.JSON(http.StatusOK, results)
+}
+
