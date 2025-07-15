@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Analysis } from '../types';
 import { getAnalysisResults, submitUrlForAnalysis } from '../services/api';
+import { AnalysisTable } from '../components/AnalysisTable';
 
 const DashboardPage: React.FC = () => {
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -70,7 +71,7 @@ const DashboardPage: React.FC = () => {
         ) : error ? (
           <p style={{ color: 'red' }}>{error}</p>
         ) : (
-          "table"
+          <AnalysisTable data={analyses} />
         )}
       </section>
     </div>
