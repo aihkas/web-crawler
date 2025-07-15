@@ -23,3 +23,7 @@ export const getAnalysisById = async (id: string): Promise<Analysis> => {
   const response = await api.get(`/results/${id}`);
   return response.data;
 };
+
+export const deleteAnalyses = async (ids: number[]): Promise<void> => {
+  await api.delete('/results', { data: { ids } });
+};
