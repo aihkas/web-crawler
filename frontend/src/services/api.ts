@@ -18,3 +18,8 @@ export const submitUrlForAnalysis = async (url: string): Promise<any> => {
   const response = await api.post('/analyze', { url });
   return response.data;
 };
+
+export const getAnalysisById = async (id: string): Promise<Analysis> => {
+  const response = await api.get(`/results/${id}`);
+  return response.data;
+};
