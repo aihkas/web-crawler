@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Analysis } from '../types';
 import {
   useReactTable,
@@ -11,6 +12,7 @@ import {
 import './AnalysisTable.css';
 
 export const AnalysisTable: React.FC<{ data: Analysis[] }> = ({ data }) => {
+  const navigate = useNavigate();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
   const columns = useMemo<ColumnDef<Analysis>[]>(() => [
@@ -35,21 +37,9 @@ export const AnalysisTable: React.FC<{ data: Analysis[] }> = ({ data }) => {
   return (
     <div className="table-container">
       <table>
-        <thead>
-          {table.getHeaderGroups().map(headerGroup => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map(header => (
-                <th key={header.id} onClick={header.column.getToggleSortingHandler()}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                  {{ asc: ' ▲', desc: ' ▼' }[header.column.getIsSorted() as string] ?? null}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
         <tbody>
           {table.getRowModel().rows.map(row => (
-            <tr key={row.id}>
+            <tr key={row.id} onClick={() => navigate(`/analysis/${row.original.id}`)}>
               {row.getVisibleCells().map(cell => (
                 <td key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
