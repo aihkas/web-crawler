@@ -33,7 +33,8 @@ func AnalyzeURL(pageURL string) (*models.Analysis, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	
+
+	bodyBytes, err := io.ReadAll(resp.Body)
 	doc := html.NewTokenizer(strings.NewReader(string(bodyBytes)))
 	result := &models.Analysis{
 		URL:           pageURL,
