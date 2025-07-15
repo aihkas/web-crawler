@@ -33,11 +33,11 @@ const DashboardPage: React.FC = () => {
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, [fetchAnalyses]);
 
-    // Filter data based on global filter input
+  // Filter data based on global filter input
   const filteredAnalyses = useMemo(() => {
     if (!globalFilter) return analyses;
     const lowercasedFilter = globalFilter.toLowerCase();
-    return analyses.filter(analysis => 
+    return analyses.filter(analysis =>
       analysis.url.toLowerCase().includes(lowercasedFilter) ||
       (analysis.page_title && analysis.page_title.toLowerCase().includes(lowercasedFilter))
     );
@@ -60,18 +60,18 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-    const handleDeleteSelected = async () => {
+  const handleDeleteSelected = async () => {
     const selectedIds = Object.keys(rowSelection).map(index => filteredAnalyses[parseInt(index)].id);
     if (selectedIds.length === 0) return;
-    
+
     if (window.confirm(`Are you sure you want to delete ${selectedIds.length} item(s)?`)) {
-        try {
-            await deleteAnalyses(selectedIds);
-            setRowSelection({}); // Clear selection
-            fetchAnalyses(); // Refresh data
-        } catch (err) {
-            setError('Failed to delete items. Please try again.');
-        }
+      try {
+        await deleteAnalyses(selectedIds);
+        setRowSelection({}); // Clear selection
+        fetchAnalyses(); // Refresh data
+      } catch (err) {
+        setError('Failed to delete items. Please try again.');
+      }
     }
   };
 
@@ -106,18 +106,19 @@ const DashboardPage: React.FC = () => {
             style={{ padding: '0.5rem', minWidth: '300px' }}
           />
           {selectedRowCount > 0 && (
-            <button onClick={handleDeleteSelected} style={{ background: '#e74c3c', color: 'white' }}>
+            <button onClick={handleDeleteSelected} className="delete-button">
               Delete Selected ({selectedRowCount})
             </button>
           )}
+
         </div>
         {isLoading ? (
           <p>Loading results...</p>
         ) : error ? (
           <p style={{ color: 'red' }}>{error}</p>
         ) : (
-          <AnalysisTable 
-            data={filteredAnalyses} 
+          <AnalysisTable
+            data={filteredAnalyses}
             rowSelection={rowSelection}
             setRowSelection={setRowSelection}
           />
