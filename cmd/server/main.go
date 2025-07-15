@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"web-crawler/internal/crawler"
@@ -56,14 +58,22 @@ func main() {
 	server := &Server{db: db}
 	router := gin.Default()
 
-	// Apply the authentication middleware to the entire /api/v1 route group.
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	api := router.Group("/api/v1")
 	api.Use(AuthMiddleware())
 	{
 		api.POST("/analyze", server.handleAnalyzeRequest)
-		api.GET("/results", server.handleGetResults)		
+		api.GET("/results", server.handleGetResults)
 	}
-
+	
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "UP"})
 	})
