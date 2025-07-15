@@ -40,3 +40,7 @@ tbody tr:hover {
   background-color: #e9ecef;
   cursor: pointer; /* Add this line */
 }
+
+tbody tr.selected-row {
+  background-color: #d4eaff !important; /* A light blue to indicate selection */
+}
