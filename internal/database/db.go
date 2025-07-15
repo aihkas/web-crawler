@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"web-crawler/internal/models"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -174,4 +175,33 @@ func GetAnalysisByID(db *sql.DB, id int64) (*models.Analysis, error) {
 	}
 
 	return &analysis, nil
+}
+
+// BulkDeleteAnalyses deletes records from analysis_results by their IDs.
+func BulkDeleteAnalyses(db *sql.DB, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// Prepare the query with the correct number of placeholders (?) to prevent SQL injection.
+	query := "DELETE FROM analysis_results WHERE id IN (?" + strings.Repeat(",?", len(ids)-1) + ")"
+	
+	// Convert []int64 to []interface{} for the Exec function.
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare delete statement: %w", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(args...)
+	if err != nil {
+		return fmt.Errorf("failed to execute delete: %w", err)
+	}
+
+	return nil
 }
