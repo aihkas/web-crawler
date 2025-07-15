@@ -74,6 +74,7 @@ func main() {
 		api.POST("/analyze", server.handleAnalyzeRequest)
 		api.GET("/results", server.handleGetResults)
 		api.GET("/results/:id", server.handleGetResultByID)
+		api.DELETE("/results", server.handleBulkDelete)
 	}
 	
 	router.GET("/health", func(c *gin.Context) {
@@ -182,3 +183,29 @@ func (s *Server) handleGetResultByID(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+type BulkDeleteRequest struct {
+	IDs []int64 `json:"ids" binding:"required"`
+}
+
+// handleBulkDelete handles the deletion of multiple analysis records.
+func (s *Server) handleBulkDelete(c *gin.Context) {
+	var req BulkDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No IDs provided for deletion"})
+		return
+	}
+
+	err := database.BulkDeleteAnalyses(s.db, req.IDs)
+	if err != nil {
+		log.Printf("ERROR: Failed to bulk delete analyses: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete records"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully deleted records"})
+}
