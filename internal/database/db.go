@@ -11,7 +11,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// InitDB remains the same, initializing and returning a connection.
 func InitDB() *sql.DB {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("DB_USER"),
@@ -71,24 +70,23 @@ func SaveAnalysisResult(db *sql.DB, id int64, result *models.Analysis) error {
 		return fmt.Errorf("failed to marshal heading counts: %w", err)
 	}
 	
-	// Inaccessible links will be an empty array.
-	inaccessibleLinksJSON, err := json.Marshal([]models.InaccessibleLink{})
+	inaccessibleLinksJSON, err := json.Marshal(result.InaccessibleLinks)
 	if err != nil {
 		return fmt.Errorf("failed to marshal inaccessible links: %w", err)
 	}
 
 	query := `
-        UPDATE analysis_results 
-        SET 
-            status = 'done', 
-            page_title = ?, 
-            html_version = ?, 
-            heading_counts = ?, 
-            internal_link_count = ?, 
-            external_link_count = ?, 
-            inaccessible_links = ?,
-            has_login_form = ?
-        WHERE id = ?`
+	UPDATE analysis_results 
+	SET
+		status = 'done',
+		html_version = ?,
+		page_title = ?,
+		internal_link_count = ?,
+		heading_counts = ?,
+		inaccessible_links = ?,
+		external_link_count = ?,
+		has_login_form = ?
+	WHERE id = ?`
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
