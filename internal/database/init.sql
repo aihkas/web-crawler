@@ -1,4 +1,4 @@
-CREATE TABLE analysis_results (
+CREATE TABLE IF NOT EXISTS analysis_results (
     id INT AUTO_INCREMENT PRIMARY KEY,
     url TEXT NOT NULL,
     status ENUM('queued', 'running', 'done', 'error') NOT NULL DEFAULT 'queued',
