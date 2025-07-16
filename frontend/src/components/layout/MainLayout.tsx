@@ -15,7 +15,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {children}
       </main>
       <footer className="main-footer">
-        <p>&copy; Skyler Web Crawler Assignment.</p>
+        <p>&copy; Sykell Web Crawler Assignment.</p>
       </footer>
     </div>
   );
