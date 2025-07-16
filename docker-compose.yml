@@ -1,0 +1,49 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: web_crawler_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD} # Must be set in .env
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      # Expose the DB port to the host for external tools if needed
+      - "3306:3306"
+    volumes:
+      # Persist database data across container restarts
+      - mysql_data:/var/lib/mysql
+      # Run the init script on first launch
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web_crawler_backend
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./.env # Load configuration from .env file
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # These are build-time args for the React app
+        REACT_APP_API_BASE_URL: http://localhost:8080/api/v1
+        REACT_APP_API_TOKEN: ${API_TOKEN}
+    container_name: web_crawler_frontend
+    restart: on-failure
+    ports:
+      - "3000:80" # Map host port 3000 to Nginx port 80
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
